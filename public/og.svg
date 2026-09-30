@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Static hex values, not var(--*) — this is a standalone marketing asset
+       exported to PNG for link previews, not part of the themed app, so it
+       can't read the page's CSS custom properties. Values match the
+       light-theme tokens in index.css (--bg, --ink, --ink-muted,
+       --accent-text, --primary, --water-mid, hull/sail/flag). -->
+  <rect width="1200" height="630" fill="#f7f4ee" />
+
+  <!-- water band -->
+  <rect x="0" y="470" width="1200" height="160" fill="#cfe7e4" />
+  <rect x="0" y="470" width="1200" height="4" fill="#0b6e6b" />
+
+  <!-- a small paper boat on the waterline, echoing the site's own ship -->
+  <g transform="translate(940,392)">
+    <path d="M68,12 L68,78" stroke="#4f3218" stroke-width="4" stroke-linecap="round" />
+    <path d="M66,42 L66,77 L33,77 Z" fill="#ddd2be" stroke="#4f3218" stroke-width="2" stroke-linejoin="round" />
+    <path d="M71.5,30 L71.5,77 L113,77 Z" fill="#f3ece0" stroke="#4f3218" stroke-width="2" stroke-linejoin="round" />
+    <path d="M14,78 H124 L108,98 Q69,106 30,98 Z" fill="#7a4e24" stroke="#4f3218" stroke-width="2.5" stroke-linejoin="round" />
+    <path d="M70,12 Q82,13 94,18 Q82,23 70,24 Z" fill="#c0392b" stroke="#8c2a20" stroke-width="1.5" stroke-linejoin="round" />
+  </g>
+
+  <text x="90" y="220" font-family="Outfit, Arial, sans-serif" font-size="30" font-weight="600" letter-spacing="6" fill="#8f5310">
+    SOFTWARE ENGINEER
+  </text>
+  <text x="90" y="300" font-family="Outfit, Arial, sans-serif" font-size="78" font-weight="600" fill="#152528">
+    Dodda Krishna Murthy
+  </text>
+  <text x="90" y="360" font-family="Inter, Arial, sans-serif" font-size="32" fill="#4a5f62">
+    Networks, systems and the occasional machine learning model.
+  </text>
+</svg>

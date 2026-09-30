@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Sourced from src/data/profile.js. Kept static (not set via JS) on
+         purpose: Open Graph/Twitter crawlers don't execute JavaScript, so
+         these have to be real tags in the served HTML to work at all.
+         That means this block is a manual snapshot — if profile.js's name,
+         role or tagline changes, update these lines too. -->
+    <title>Dodda Krishna Murthy — Software Engineer</title>
+    <meta name="description" content="Networks, systems and the occasional machine learning model." />
+
+    <!-- Absolute URLs, not "/og.png" — og:image/twitter:image and og:url
+         must be fully-qualified for crawlers to resolve reliably, and
+         unlike <link href> / <script src>, a <meta content> value is never
+         rewritten by Vite's `base` at build time. Update the domain here if
+         this ever moves off GitHub Pages or the repo is renamed. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://dkm1234567890.github.io/portfolio/" />
+    <meta property="og:title" content="Dodda Krishna Murthy — Software Engineer" />
+    <meta property="og:description" content="Networks, systems and the occasional machine learning model." />
+    <meta property="og:image" content="https://dkm1234567890.github.io/portfolio/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Dodda Krishna Murthy — Software Engineer" />
+    <meta name="twitter:description" content="Networks, systems and the occasional machine learning model." />
+    <meta name="twitter:image" content="https://dkm1234567890.github.io/portfolio/og.png" />
+
+    <!-- Light-theme --bg as a pre-JS fallback; useTheme.js overwrites this
+         with the live --bg value the instant the active theme is known. -->
+    <meta name="theme-color" content="#f7f4ee" />
+
+    <!-- Blocking, synchronous: sets data-theme before first paint so there's
+         no flash of the wrong theme. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', stored || (dark ? 'dark' : 'light'));
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

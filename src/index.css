@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+/* Every colour in the project lives here. Nowhere else. */
+:root {
+  --bg:            #f7f4ee;
+  --surface:       #ffffff;
+  --surface-2:     #efe9df;
+  --ink:           #152528;
+  --ink-muted:     #4a5f62;
+  --primary:       #0b6e6b;
+  --primary-soft:  #cfe7e4;
+  --border:        #ded6c9;
+  --border-strong: #7d7060;  /* form inputs & controls. 4.39:1 */
+
+  /* Accent is split four ways on purpose. A single vivid amber cannot be
+     both an illustration fill and readable 12px text (3.66:1 fails AA), and
+     white-on-amber in dark mode is 2.16:1. So: --accent for shapes only,
+     --accent-text for text/icons, --accent-cta + --accent-on as a button
+     pair. Never `text-accent`. */
+  --accent:        #c87b2c;  /* illustration fills ONLY. Never text. */
+  --accent-text:   #8f5310;  /* small text & icons.  5.61:1 on --bg   */
+  --accent-cta:    #8f5310;  /* button background                     */
+  --accent-on:     #ffffff;  /* text on --accent-cta.  6.15:1         */
+  --ring:          #8f5310;  /* focus ring                            */
+  --danger:        #b3261e;  /* form validation text/borders. ~7.4:1 on --bg */
+
+  /* water */
+  --water-deep:    #0b6e6b;
+  --water-mid:     #7fbdb8;
+  --water-foam:    #ffffff;
+
+  /* the ship */
+  --hull:          #7a4e24;
+  --hull-shade:    #4f3218;
+  --deck:          #e7dcc8;
+  --sail:          #f3ece0;
+  --sail-shade:    #ddd2be;
+  --flag:          #c0392b;
+  --flag-dark:     #8c2a20;
+
+  --ease:          cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* data-theme lives on <html> (the :root element), so this MUST be a
+   top-level selector, not nested inside :root — nesting it would compile to
+   `:root [data-theme='dark']` (descendant) and never match. */
+[data-theme='dark'] {
+  --bg:            #0d1719;
+  --surface:       #16262a;
+  --surface-2:     #1e3237;
+  --ink:           #edf3f2;
+  --ink-muted:     #a9bfbe;
+  --primary:       #57c4bc;
+  --primary-soft:  #1f4a48;
+  --border:        #274045;
+  --border-strong: #688e95;
+
+  --accent:        #e8a33d;
+  --accent-text:   #e8a33d;  /* 8.44:1 on dark bg — safe as text here */
+  --accent-cta:    #e8a33d;
+  --accent-on:     #0d1719;  /* CTA inverts: amber fill, near-black label */
+  --ring:          #e8a33d;
+  --danger:        #ff8a80;  /* light coral — ~9:1 on dark bg */
+
+  --water-deep:    #0a2f33;
+  --water-mid:     #2e7c78;
+  --water-foam:    #9fe0da;
+
+  /* the ship, lifted so it doesn't disappear into a dark background */
+  --hull:          #8a5a2c;
+  --hull-shade:    #c99a5f;
+  --deck:          #e7dcc8;
+  --sail:          #d9d0be;
+  --sail-shade:    #b3a891;
+  --flag:          #e04b3d;
+  --flag-dark:     #8c2a20;
+}
+
+/* Hands those variables to Tailwind, so `bg-bg` and `text-ink` work as
+   classes. The word `inline` matters — it keeps them as live variables,
+   which is what lets dark mode work. Any new colour token must be added in
+   BOTH the blocks above AND here. */
+@theme inline {
+  --color-bg:            var(--bg);
+  --color-surface:       var(--surface);
+  --color-surface-2:     var(--surface-2);
+  --color-ink:           var(--ink);
+  --color-ink-muted:     var(--ink-muted);
+  --color-primary:       var(--primary);
+  --color-primary-soft:  var(--primary-soft);
+  --color-border:        var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent:        var(--accent);
+  --color-accent-text:   var(--accent-text);
+  --color-accent-cta:    var(--accent-cta);
+  --color-accent-on:     var(--accent-on);
+  --color-danger:        var(--danger);
+  --color-water-deep:    var(--water-deep);
+  --color-water-mid:     var(--water-mid);
+  --color-water-foam:    var(--water-foam);
+
+  --font-display: 'Outfit Variable', sans-serif;
+  --font-sans:    'Inter Variable', sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Off-screen until focused — the first thing a keyboard user reaches. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 200;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  font-weight: 600;
+}
+.skip-link:focus {
+  left: 0.75rem;
+  top: 0.75rem;
+}

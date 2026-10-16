@@ -43,27 +43,11 @@ export const journey = [
     id: 'experience',
     kind: 'story',
     icon: 'harbour',
-    title: 'TODO — this node is empty',
-    subtitle: 'TODO',
-    // ------------------------------------------------------------------
-    // BLOCKED. This is the most important node on the page for a recruiter
-    // and I have nothing to write it from.
-    //
-    // You said you are working as a trainee. None of your four resumes
-    // mention it. Send me:
-    //
-    //   - company name (or "cannot name it" and I will write around it)
-    //   - your title
-    //   - start date, and whether you are still there
-    //   - the stack you actually touch day to day
-    //   - one thing you shipped or fixed that existed after you left
-    //
-    // That last item is what a recruiter reads. "Gained exposure to" is
-    // filler; "fixed the retry logic that was dropping webhook events" is
-    // a reason to call you.
-    // ------------------------------------------------------------------
+    title: 'Software Engineer at Bounteous',
+    subtitle: 'About a year · Java, front end, MySQL',
     body: [
-      'TODO: replace this whole object once you send me the training details.',
+      'I have been working as a Software Engineer at Bounteous for about a year. Java is my main language day to day, with front-end work and MySQL alongside it.',
+      'The project in front of me is an attendance management system that our team is building. I handle the attendance reports, and I work across the back end, the models and the front-end UI changes.',
     ],
   },
 

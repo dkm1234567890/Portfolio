@@ -68,8 +68,10 @@ export default function PaperBoat({ size = 240 }) {
               strokeWidth="2" strokeLinejoin="round" />
 
         {/* shaded facet on the right half. One flat overlay, no gradient —
-            this is the whole trick to depth in flat art. */}
-        <path d="M69,78 H124 L108,98 Q69,106 69,106 Z"
+            this is the whole trick to depth in flat art. The bottom edge is
+            the first half of the hull's own curve (split at t=0.5), so the
+            facet stays inside the hull instead of hanging below it. */}
+        <path d="M69,78 H124 L108,98 Q88.5,102 69,102 Z"
               fill="var(--hull-shade)" opacity="0.2" />
 
         {/* deck stripe, drawn last so it reads across both facets */}

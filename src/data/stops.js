@@ -13,8 +13,6 @@ export const stops = [
   ...journey.slice(4),
 ]
 
-// Anchor fraction (0..1) of a stop along the river, derived from its index so
-// adding a 12th project stays a one-object change in projects.js — no manual
-// renumbering. Padded 0.06..0.94 so the first and last islands aren't jammed
-// against the ends of the path.
-export const anchorFor = (i, total) => 0.06 + (i / (total - 1)) * 0.88
+// There's no per-stop position data: each RiverNode measures where its own
+// card sits and places its marker on the path at that height, so adding a
+// project stays a one-object change in projects.js.

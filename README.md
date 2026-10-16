@@ -51,8 +51,9 @@ array:
 ```
 
 That's the whole change. `src/data/stops.js` splices `projects` into the
-river's ordered stop list and derives each island's position along the path
-from its array index (`anchorFor`), so nothing else needs renumbering.
+river's ordered stop list, and each island measures where its own card sits
+and places its marker on the path at that height, so nothing else needs
+renumbering.
 
 ## Swapping the resume PDF
 
@@ -119,8 +120,9 @@ new colours get a token first, then get used via `var(--token)` in SVG or a
   text; `--accent-text` for small text/icons; `--accent-cta` +
   `--accent-on` as a button background/label pair. Never `text-accent`.
 - **One easing curve, three durations.** `cubic-bezier(0.22, 1, 0.36, 1)`
-  (`--ease`); 120ms / 320ms / 600ms. Springs are reserved for the ship's bob
-  and the splash burst — everything else uses the shared curve.
+  (`--ease`); 120ms / 320ms / 600ms. Springs are used for small, physical
+  motions — the splash burst, card entrances, the nav pill and the letter
+  popping into the mailbox; everything else uses the shared curve.
 - **`prefers-reduced-motion` changes behaviour, not speed.** Use the
   project's own `usePrefersReducedMotion()` hook (a live `matchMedia`
   subscription) for any component-level check — not Motion's own

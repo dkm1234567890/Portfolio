@@ -1,5 +1,4 @@
 import { motion } from 'motion/react'
-import PaperBoat from './PaperBoat'
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import { profile } from '../data/profile'
 
@@ -9,9 +8,9 @@ export default function Hero() {
   return (
     <section
       id="about"
-      className="relative flex min-h-screen flex-col justify-center overflow-hidden px-6 pt-16"
+      className="relative flex min-h-svh flex-col overflow-hidden pt-16"
     >
-      <div className="relative z-20 mx-auto w-full max-w-5xl">
+      <div className="relative z-20 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6 py-12">
         <p className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-accent-text">
           {profile.role}
         </p>
@@ -37,7 +36,6 @@ export default function Hero() {
           >
             See the work
           </a>
-          {/* Dead link is fine until Task 9 wires up the real PDF. */}
           <a
             href={import.meta.env.BASE_URL + profile.resume.file}
             className="rounded-full border border-border-strong px-6 py-3 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary"
@@ -47,31 +45,26 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* The ship rests on the waterline at the top of the band. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 z-10 flex justify-center"
-        style={{ bottom: 'calc(30vh - 48px)' }}
-      >
-        <PaperBoat size={220} />
+      {/* The water the river flows out of. No boat here: the river's own
+          Ship starts at the top of the river directly below this band, and
+          a second boat in the hero meant two were on screen at once while
+          scrolling past it. In normal flow (not absolute) so a short window
+          makes the section grow taller instead of the water riding up into
+          the text. */}
+      <div className="relative z-0 mt-12 shrink-0" aria-hidden="true">
+        <div className="h-[30vh] border-t-4 border-primary bg-primary-soft" />
+
+        {/* Scroll cue — decorative, hidden entirely under reduced motion. */}
+        {!reduced && (
+          <motion.div
+            className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 text-xs font-semibold uppercase tracking-widest text-ink-muted"
+            animate={{ y: [0, 6, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            Scroll
+          </motion.div>
+        )}
       </div>
-
-      {/* PLACEHOLDER water band — Task 5 replaces this with the real river. */}
-      <div
-        className="absolute inset-x-0 bottom-0 z-0 h-[30vh] border-t-4 border-primary bg-primary-soft"
-        aria-hidden="true"
-      />
-
-      {/* Scroll cue — decorative, hidden entirely under reduced motion. */}
-      {!reduced && (
-        <motion.div
-          className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 text-xs font-semibold uppercase tracking-widest text-ink-muted"
-          aria-hidden="true"
-          animate={{ y: [0, 6, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          Scroll
-        </motion.div>
-      )}
     </section>
   )
 }

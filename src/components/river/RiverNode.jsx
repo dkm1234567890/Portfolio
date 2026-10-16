@@ -1,8 +1,7 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useRiverContext } from './RiverContext'
 import { VIEWBOX_WIDTH, VIEWBOX_HEIGHT } from './RiverPath'
-import { anchorFor } from '../../data/stops'
 import { skills, tierLabels } from '../../data/skills'
 import { IslandIcon } from '../art'
 import GitHubMark from '../icons/GitHubMark'
@@ -173,7 +172,7 @@ function ProjectBody({ stop, reduced }) {
             type="button"
             onClick={() => setExpanded((e) => !e)}
             aria-expanded={expanded}
-            aria-controls={detailId}
+            aria-controls={expanded ? detailId : undefined}
             className="flex items-center gap-1.5 rounded-full text-sm font-semibold text-primary"
           >
             {expanded ? 'Hide details' : 'Show details'}
@@ -234,46 +233,99 @@ function Body({ stop, reduced }) {
   }
 }
 
+// `lg:` (1024px) here must stay in step with useIsDesktop()'s
+// (min-width: 1024px) — a `md:` class would apply the two-column layout in
+// the 768–1023px range where the JS still positions markers for mobile,
+// leaving every card half-width and pinned left.
 function sectionClass(isDesktop, side) {
-  const base = 'relative w-full px-6 py-16 md:flex md:min-h-[85vh] md:items-center md:py-24'
+  const base = 'relative w-full px-6 py-16 lg:flex lg:min-h-[85vh] lg:items-center lg:py-24'
   if (!isDesktop) return base
-  return `${base} ${side === 'left' ? 'md:justify-start' : 'md:justify-end'}`
+  return `${base} ${side === 'left' ? 'lg:justify-start' : 'lg:justify-end'}`
 }
 
-// One generic node. `stop` is an entry from data/stops.js; `index`/`total`
-// must match the values Ship used to build its anchor list, so this node's
-// marker lands on exactly the point the ship splashes at.
-export default function RiverNode({ stop, index, total }) {
-  const { pathRef, isDesktop, reduced } = useRiverContext()
+// Path length at which the path reaches viewBox height `y`. Every bend in
+// RiverPath only ever moves downward, so y grows monotonically with length
+// and a bisection converges.
+function lengthAtY(pathEl, len, y) {
+  let lo = 0
+  let hi = len
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2
+    if (pathEl.getPointAtLength(mid).y < y) lo = mid
+    else hi = mid
+  }
+  return hi
+}
+
+// One generic node. `stop` is an entry from data/stops.js; `index` is its
+// position in that list, which is how Ship's splash events address it.
+//
+// The marker is placed level with this node's own card (desktop) or its
+// in-flow marker (mobile), then slid sideways onto the path at that height —
+// so it always lines up with the content it labels, however tall the cards
+// above it turn out to be. Its fraction along the path is published to
+// anchorsRef so the ship splashes at exactly that point.
+export default function RiverNode({ stop, index }) {
+  const { pathRef, anchorsRef, layoutTick, isDesktop, reduced } = useRiverContext()
   const [marker, setMarker] = useState(null)
   const [pulsing, setPulsing] = useState(false)
   const headingId = useId()
+  const sectionRef = useRef(null)
+  const cardRef = useRef(null)
+  const inlineMarkerRef = useRef(null)
 
-  useEffect(() => {
+  // Layout effect, not a passive one: the card's side depends on this
+  // measurement, and resolving it before paint is what stops cards visibly
+  // jumping from right to left on load. Offsets rather than
+  // getBoundingClientRect, so the card's own entrance transform (y/scale)
+  // doesn't skew the reading.
+  useLayoutEffect(() => {
     const pathEl = pathRef.current
-    if (!pathEl) return
+    const svg = pathEl?.ownerSVGElement
+    const section = sectionRef.current
+    const target = isDesktop ? cardRef.current : inlineMarkerRef.current
+    if (!pathEl || !svg || !section || !target) return
     const len = pathEl.getTotalLength()
-    if (!len) return
-    const anchor = anchorFor(index, total)
-    const point = pathEl.getPointAtLength(anchor * len)
+    const height = svg.getBoundingClientRect().height
+    if (!len || !height) return
+
+    // section.offsetTop is relative to River's content wrapper, which spans
+    // exactly the same box as the river SVG.
+    const yPx = section.offsetTop + target.offsetTop + target.offsetHeight / 2
+    const at = lengthAtY(pathEl, len, (yPx / height) * VIEWBOX_HEIGHT)
+    const point = pathEl.getPointAtLength(at)
+
+    anchorsRef.current[index] = at / len
     setMarker({
-      top: (point.y / VIEWBOX_HEIGHT) * 100,
+      top: (yPx / height) * 100,
       left: (point.x / VIEWBOX_WIDTH) * 100,
       // Card goes on the side the curve ISN'T bulging toward at this point.
       side: point.x >= VIEWBOX_WIDTH / 2 ? 'left' : 'right',
     })
-  }, [pathRef, isDesktop, index, total])
+  }, [pathRef, anchorsRef, layoutTick, isDesktop, index])
+
+  // A node that unmounts must not leave a stale anchor behind.
+  useEffect(() => {
+    const anchors = anchorsRef.current
+    return () => {
+      delete anchors[index]
+    }
+  }, [anchorsRef, index])
 
   useEffect(() => {
     if (reduced) return
+    let t
     const onSplash = (e) => {
       if (e.detail?.index !== index) return
       setPulsing(true)
-      const t = setTimeout(() => setPulsing(false), 700)
-      return () => clearTimeout(t)
+      clearTimeout(t)
+      t = setTimeout(() => setPulsing(false), 700)
     }
     window.addEventListener('river:splash', onSplash)
-    return () => window.removeEventListener('river:splash', onSplash)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('river:splash', onSplash)
+    }
   }, [index, reduced])
 
   const isProject = stop.kind === 'project'
@@ -284,52 +336,70 @@ export default function RiverNode({ stop, index, total }) {
   const side = isDesktop ? (marker?.side ?? 'right') : 'full'
   const isTodo = typeof heading === 'string' && heading.startsWith('TODO')
 
+  const markerBody = (
+    <>
+      <motion.div
+        className="pointer-events-none grid h-5 w-5 place-items-center rounded-full border-2 border-primary bg-surface"
+        aria-hidden="true"
+        animate={reduced ? undefined : pulsing ? { scale: [1, 1.7, 1] } : { scale: 1 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
+        <span className="h-2 w-2 rounded-full bg-primary" />
+      </motion.div>
+
+      {/* Repo badge lives on the marker, not the card — a separate Tab
+          stop with its own focus ring. */}
+      {isProject && (
+        <motion.a
+          href={stop.repo}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`View ${stop.name} source on GitHub`}
+          className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-border bg-surface text-ink shadow-sm"
+          whileHover={reduced ? undefined : { scale: 1.12, rotate: -6 }}
+          whileFocus={reduced ? undefined : { scale: 1.12, rotate: -6 }}
+          transition={{ duration: 0.12, ease: EASE }}
+        >
+          <GitHubMark />
+        </motion.a>
+      )}
+    </>
+  )
+
   return (
     <>
-      {marker && (
+      {/* Desktop: the marker sits on the river path itself. On mobile the
+          cards span the full width and cover the path, so an absolutely
+          positioned marker would float over card text — the marker renders
+          in-flow above the card instead (SPEC: "card is always full-width
+          directly below its marker"). */}
+      {isDesktop && marker && (
         <div
           className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
           style={{ top: `${marker.top}%`, left: `${marker.left}%` }}
         >
-          <motion.div
-            className="pointer-events-none grid h-5 w-5 place-items-center rounded-full border-2 border-primary bg-surface"
-            aria-hidden="true"
-            animate={reduced ? undefined : pulsing ? { scale: [1, 1.7, 1] } : { scale: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          >
-            <span className="h-2 w-2 rounded-full bg-primary" />
-          </motion.div>
-
-          {/* Repo badge lives on the marker, not the card — a separate Tab
-              stop with its own focus ring. stopPropagation keeps a click
-              here from also reaching the card's expand toggle. */}
-          {isProject && (
-            <motion.a
-              href={stop.repo}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`View ${stop.name} source on GitHub`}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute -right-2 -top-2 grid h-7 w-7 place-items-center rounded-full border border-border bg-surface text-ink shadow-sm"
-              whileHover={reduced ? undefined : { scale: 1.12, rotate: -6 }}
-              whileFocus={reduced ? undefined : { scale: 1.12, rotate: -6 }}
-              transition={{ duration: 0.12, ease: EASE }}
-            >
-              <GitHubMark />
-            </motion.a>
-          )}
+          {markerBody}
         </div>
       )}
 
-      <section aria-labelledby={headingId} className={sectionClass(isDesktop, side)}>
+      <section ref={sectionRef} aria-labelledby={headingId} className={sectionClass(isDesktop, side)}>
+        {!isDesktop && (
+          <div ref={inlineMarkerRef} className="relative z-20 mx-auto mb-4 w-fit">
+            {markerBody}
+          </div>
+        )}
+        {/* No `layout` here: the side is settled before first paint by the
+            measurement above, and a card-level layout animation would only
+            turn any later re-measure into the card sliding across the
+            screen. The expand/collapse height change is animated inside
+            ProjectBody. */}
         <motion.div
+          ref={cardRef}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.4 }}
           variants={cardVariants(reduced)}
-          layout
-          transition={{ layout: { duration: reduced ? 0 : 0.32, ease: EASE } }}
-          className={`w-full rounded-3xl bg-surface p-6 shadow-sm md:w-[46%] md:p-8 ${
+          className={`w-full rounded-3xl bg-surface p-6 shadow-sm lg:w-[46%] lg:p-8 ${
             isTodo ? 'border-2 border-dashed border-border-strong' : 'border border-border'
           }`}
         >

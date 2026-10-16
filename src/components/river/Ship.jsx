@@ -3,7 +3,7 @@ import { motion, useMotionValue, useMotionValueEvent } from 'motion/react'
 import { animate } from 'motion'
 import PaperBoat from '../PaperBoat'
 import { VIEWBOX_WIDTH, VIEWBOX_HEIGHT } from './RiverPath'
-import { stops, anchorFor } from '../../data/stops'
+import { stops } from '../../data/stops'
 
 // Rendered size of the boat art. Its hull is drawn bow-down (the taper sits
 // at the bottom of the viewBox), so a 0deg rotation already reads as "facing
@@ -11,7 +11,7 @@ import { stops, anchorFor } from '../../data/stops'
 const SHIP_SIZE = 84
 const SHIP_ASPECT = 110 / 140
 
-const LEAD = 0.02 // ship rides this far ahead of the drawn river length
+const LEAD = 0.02 // ship trails this far behind the drawn tip of the river
 const ROTATE_DAMP = 0.15 // per-update lerp toward the target heading
 const MAX_TILT = 20 // degrees either side of "facing downstream"
 
@@ -23,8 +23,6 @@ const WAKE_STYLE = [
   { r: 1.7, opacity: 0.24 },
   { r: 1.3, opacity: 0.14 },
 ]
-
-const ANCHORS = stops.map((_, i) => anchorFor(i, stops.length))
 
 // Splashes are one-shot bursts, not continuous motion, but they still must
 // never touch React state on the scroll path (see positionAt below) — a
@@ -48,12 +46,18 @@ function clamp01(n) {
 //
 // `pathRef` is River's base <path> (for getTotalLength/getPointAtLength),
 // `pathLenRef` is its cached total length (a ref, recomputed by River on
-// resize/variant-swap), `progress` is River's scrollYProgress MotionValue.
-export default function Ship({ pathRef, pathLenRef, progress, reduced }) {
+// resize/variant-swap), `anchorsRef` holds each node's measured fraction
+// along the path, `progress` is River's scrollYProgress MotionValue.
+export default function Ship({ pathRef, pathLenRef, anchorsRef, progress, reduced }) {
   const wrapperRef = useRef(null)
   const idleTimerRef = useRef(null)
   const rotationRef = useRef(0)
-  const crossedRef = useRef(-1)
+  // Ship position at the previous update — null until the first one, which
+  // only records where the ship starts. Splashes fire for anchors between
+  // the previous and current positions, so a reload halfway down the page
+  // doesn't set off every splash above the fold at once.
+  const prevShipTRef = useRef(null)
+  const firedRef = useRef(new Set()) // node indexes that have already splashed
   const splashPoolRef = useRef([]) // splashPoolRef.current[slot] = circle DOM nodes for that slot
   const nextSplashSlotRef = useRef(0)
 
@@ -142,19 +146,23 @@ export default function Ship({ pathRef, pathLenRef, progress, reduced }) {
         wakeY[i].set(pt.sy)
       })
 
-      // Fire once per anchor crossed, forward only. The while loop (rather
-      // than a single if) catches a fast scroll that jumps past more than
-      // one island in a single frame, so none of them get skipped.
-      while (crossedRef.current + 1 < ANCHORS.length && shipT >= ANCHORS[crossedRef.current + 1]) {
-        crossedRef.current += 1
-        const idx = crossedRef.current
-        const pt = toScreen(ANCHORS[idx])
+      // Fire once per anchor crossed, forward only. Checking every anchor in
+      // the (prev, current] window catches a fast scroll that jumps past
+      // more than one island in a single frame, so none of them get skipped.
+      const prevT = prevShipTRef.current
+      prevShipTRef.current = shipT
+      if (prevT === null || shipT <= prevT) return
+      anchorsRef.current.forEach((anchor, idx) => {
+        if (anchor == null || firedRef.current.has(idx)) return
+        if (anchor <= prevT || anchor > shipT) return
+        firedRef.current.add(idx)
+        const pt = toScreen(anchor)
         fireSplash(pt.sx, pt.sy)
         // RiverNode listens for this to pulse the crossed marker.
         window.dispatchEvent(new CustomEvent('river:splash', { detail: { index: idx, stop: stops[idx] } }))
-      }
+      })
     },
-    [pathRef, pathLenRef, x, y, rotate, wakeX, wakeY, fireSplash]
+    [pathRef, pathLenRef, anchorsRef, x, y, rotate, wakeX, wakeY, fireSplash]
   )
 
   // Scroll-linked update. Guarded on `reduced` so a reduced-motion visitor
@@ -171,10 +179,18 @@ export default function Ship({ pathRef, pathLenRef, progress, reduced }) {
     }, 200)
   })
 
-  // Reduced motion: park at the top once, and never subscribe to resize.
+  // Position on mount: scrollYProgress only notifies on *change*, so without
+  // this the boat and its wake sit at the container's top-left corner until
+  // the first scroll. Reduced motion parks at the top and never moves again.
   useEffect(() => {
-    if (reduced) positionAt(0)
-  }, [reduced, positionAt])
+    // Start fresh: this position is a baseline, not a crossing.
+    prevShipTRef.current = null
+    positionAt(reduced ? 0 : progress.get())
+  }, [reduced, positionAt, progress])
+
+  // The idle willChange-reset timer outlives the change subscription — clear
+  // it on unmount.
+  useEffect(() => () => clearTimeout(idleTimerRef.current), [])
 
   // A resize or orientation change moves the path's screen geometry even
   // though scroll progress hasn't changed — reposition using the current

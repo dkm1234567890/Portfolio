@@ -9,8 +9,8 @@ import Footer from './components/Footer'
 import { stops } from './data/stops'
 
 // The four journey stops (about, activities, experience, skills) that come
-// before the projects. Their index/total must match what Ship used to build
-// its anchor list, so pass the same `stops` array and position by index.
+// before the projects. Each node's `index` is its position in `stops` —
+// that's how the ship's splash events address it.
 const journeyStops = stops.slice(0, 4)
 
 // Everything between the journey and the closing 'next' node is a project —
@@ -41,16 +41,16 @@ export default function App() {
             'next' node, then widens into the estuary — resume and contact. */}
         <River>
           {journeyStops.map((stop, i) => (
-            <RiverNode key={stop.id} stop={stop} index={i} total={stops.length} />
+            <RiverNode key={stop.id} stop={stop} index={i} />
           ))}
 
           <div id="projects">
             {projectStops.map((stop, i) => (
-              <RiverNode key={stop.slug} stop={stop} index={4 + i} total={stops.length} />
+              <RiverNode key={stop.slug} stop={stop} index={4 + i} />
             ))}
           </div>
 
-          <RiverNode stop={nextStop} index={stops.length - 1} total={stops.length} />
+          <RiverNode stop={nextStop} index={stops.length - 1} />
 
           <div className="mx-auto flex w-full max-w-4xl flex-col items-start justify-center gap-6 md:flex-row md:items-stretch md:gap-16">
             <ResumeBox />

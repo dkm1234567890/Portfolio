@@ -15,6 +15,15 @@ dist-ssr
 # EmailJS config — see .env.example for the keys this needs
 .env
 
+# Test / audit output
+test-results/
+playwright-report/
+lh-*.json
+
+# Local working files
+src/*.zip
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

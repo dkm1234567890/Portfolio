@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import emailjs from '@emailjs/browser'
 import { profile } from '../data/profile'
@@ -7,6 +7,10 @@ import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 const EASE = [0.22, 1, 0.36, 1]
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MIN_MESSAGE_LENGTH = 20
+// `trap` is the honeypot. Deliberately not called "company" or anything
+// else a browser's autofill recognises — autofill ignores autoComplete="off"
+// often enough that a real visitor's form would be silently dropped.
+const EMPTY_FIELDS = { name: '', email: '', message: '', trap: '' }
 
 function validate(fields) {
   const errors = {}
@@ -47,11 +51,13 @@ function MailboxArt({ raised, popped, reduced, size = 84 }) {
                 ? { rotate: -35 }
                 : { rotate: [0, -4, 0, 3, 0] }
         }
+        // Three keyframes, so a tween with `times` rather than a spring —
+        // Motion's springs only interpolate between two values.
         transition={
           reduced
             ? { duration: 0 }
             : popped
-              ? { type: 'spring', stiffness: 260, damping: 14 }
+              ? { duration: 0.6, times: [0, 0.45, 1], ease: EASE }
               : raised
                 ? { duration: 0.32, ease: EASE }
                 : { duration: 3.2, repeat: Infinity, ease: 'easeInOut' }
@@ -104,7 +110,7 @@ function CloseIcon() {
   )
 }
 
-function Field({ label, id, errorId, error, value, onChange, type = 'text', textarea, autoComplete }) {
+function Field({ label, id, errorId, error, value, onChange, type = 'text', textarea, autoComplete, inputRef }) {
   const Tag = textarea ? 'textarea' : 'input'
   return (
     <div>
@@ -112,6 +118,7 @@ function Field({ label, id, errorId, error, value, onChange, type = 'text', text
         {label}
       </label>
       <Tag
+        ref={inputRef}
         id={id}
         name={id}
         type={textarea ? undefined : type}
@@ -137,8 +144,14 @@ export default function Mailbox() {
   const [open, setOpen] = useState(false)
   const [hovered, setHovered] = useState(false)
   const [status, setStatus] = useState('idle') // idle | sending | success | error
-  const [fields, setFields] = useState({ name: '', email: '', message: '', company: '' })
+  const [fields, setFields] = useState(EMPTY_FIELDS)
   const [errors, setErrors] = useState({})
+
+  const triggerRef = useRef(null) // the closed mailbox button
+  const nameRef = useRef(null)
+  const resetRef = useRef(null) // "Send another message"
+  const wasOpenRef = useRef(false)
+  const prevStatusRef = useRef(status)
 
   const nameId = useId()
   const emailId = useId()
@@ -158,15 +171,33 @@ export default function Mailbox() {
   }
 
   const reset = () => {
-    setFields({ name: '', email: '', message: '', company: '' })
+    setFields(EMPTY_FIELDS)
     setErrors({})
     setStatus('idle')
   }
 
+  // Focus follows the panel: into the first field on open, back to the
+  // mailbox button on close — otherwise the control that held focus
+  // unmounts and keyboard users are dropped back at the top of the page.
+  useEffect(() => {
+    if (open) nameRef.current?.focus()
+    else if (wasOpenRef.current) triggerRef.current?.focus()
+    wasOpenRef.current = open
+  }, [open])
+
+  // Same for the success swap: the submit button unmounts, so hand focus to
+  // "Send another message", and from there back to the name field.
+  useEffect(() => {
+    const prev = prevStatusRef.current
+    prevStatusRef.current = status
+    if (status === 'success') resetRef.current?.focus()
+    else if (prev === 'success' && status === 'idle') nameRef.current?.focus()
+  }, [status])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (status === 'sending') return
-    if (fields.company) return // honeypot tripped — drop silently, no error shown
+    if (fields.trap) return // honeypot tripped — drop silently, no error shown
 
     const nextErrors = validate(fields)
     setErrors(nextErrors)
@@ -177,7 +208,7 @@ export default function Mailbox() {
       await emailjs.send(
         import.meta.env.VITE_EMAILJS_SERVICE_ID,
         import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        { from_name: fields.name, reply_to: fields.email, message: fields.message },
+        { from_name: fields.name.trim(), reply_to: fields.email.trim(), message: fields.message.trim() },
         import.meta.env.VITE_EMAILJS_PUBLIC_KEY
       )
       setStatus('success')
@@ -186,11 +217,14 @@ export default function Mailbox() {
     }
   }
 
+  // Success is shown here; the error case already has a visible message
+  // (with the mailto fallback) inside the form, so here it's announced to
+  // screen readers only rather than printed twice.
   const statusMessage =
     status === 'success'
       ? 'Message sent. Thanks for reaching out — you will hear back soon.'
       : status === 'error'
-        ? 'Something went wrong sending that message.'
+        ? "That didn't go through. Try again, or email directly."
         : ''
 
   return (
@@ -207,6 +241,7 @@ export default function Mailbox() {
       <motion.div layout transition={{ duration: reduced ? 0 : 0.32, ease: EASE }} className="mt-6 w-full max-w-sm">
         {!open ? (
           <button
+            ref={triggerRef}
             type="button"
             onClick={() => setOpen(true)}
             onMouseEnter={() => setHovered(true)}
@@ -224,6 +259,9 @@ export default function Mailbox() {
             animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
             transition={{ duration: reduced ? 0.15 : 0.32, ease: EASE }}
             className="rounded-3xl border border-border bg-surface p-6 text-left shadow-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setOpen(false)
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -240,29 +278,34 @@ export default function Mailbox() {
               </button>
             </div>
 
-            {/* Kept in the DOM from the first render (not inserted only once
-                there's something to say) so assistive tech already knows
-                about this region before status ever changes. */}
-            <p role="status" aria-live="polite" className={statusMessage ? 'mt-4 text-sm font-medium text-ink' : 'sr-only'}>
-              {statusMessage || 'placeholder'}
+            {/* Mounted (empty) as soon as the panel opens, well before the
+                status can change, so assistive tech already knows about the
+                region when there's finally something to announce. */}
+            <p
+              role="status"
+              aria-live="polite"
+              className={status === 'success' ? 'mt-4 text-sm font-medium text-ink' : 'sr-only'}
+            >
+              {statusMessage}
             </p>
 
             {status === 'success' ? (
-              <button type="button" onClick={reset} className="mt-3 text-sm font-semibold text-primary">
+              <button ref={resetRef} type="button" onClick={reset} className="mt-3 text-sm font-semibold text-primary">
                 Send another message
               </button>
             ) : (
               <form onSubmit={handleSubmit} noValidate className="mt-2 flex flex-col gap-3">
                 {/* Honeypot — off-screen, unreachable by Tab, real users never see or fill it. */}
                 <div style={{ position: 'absolute', left: '-9999px' }} aria-hidden="true">
-                  <label htmlFor={honeypotId}>Company</label>
+                  <label htmlFor={honeypotId}>Leave this field empty</label>
                   <input
                     id={honeypotId}
+                    name="hp_trap"
                     type="text"
                     tabIndex={-1}
                     autoComplete="off"
-                    value={fields.company}
-                    onChange={updateField('company')}
+                    value={fields.trap}
+                    onChange={updateField('trap')}
                   />
                 </div>
 
@@ -274,6 +317,7 @@ export default function Mailbox() {
                   value={fields.name}
                   onChange={updateField('name')}
                   autoComplete="name"
+                  inputRef={nameRef}
                 />
                 <Field
                   label="Email"

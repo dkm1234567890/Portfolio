@@ -104,6 +104,12 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    /* The fixed header is h-16; without this every in-page link lands
+       with the section's heading tucked underneath it. */
+    scroll-padding-top: 4rem;
+  }
   body {
     background-color: var(--bg);
     color: var(--ink);

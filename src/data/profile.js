@@ -6,6 +6,7 @@
 
 export const profile = {
   name: 'Dodda Krishna Murthy',
+  shortName: 'Krishna', // shown as the navbar brand
 
   // One line, under 12 words, that says what you do. Not an "objective" —
   // objectives talk about what you want; this talks about what you are.
@@ -24,9 +25,7 @@ export const profile = {
   email: 'dkmurthy32@gmail.com',
 
   links: {
-    // TODO: paste your real LinkedIn URL. "linkedin.com" on a resume is a
-    // dead link — recruiters notice, and it reads as unfinished.
-    linkedin: 'https://linkedin.com/in/YOUR-HANDLE',
+    linkedin: 'https://www.linkedin.com/in/d-krishna-murthy-942b63257/',
     github: 'https://github.com/dkm1234567890',
     twitter: '', // leave empty and the icon won't render
   },

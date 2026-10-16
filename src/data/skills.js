@@ -17,7 +17,7 @@ export const skills = [
       { name: 'Python', tier: 'core' },      // server monitoring, disease prediction, stock
       { name: 'C', tier: 'core' },           // battleship, socket programming
       { name: 'SQL', tier: 'core' },         // irrigation, disease prediction
-      { name: 'Java', tier: 'working' },     // hotel management
+      { name: 'Java', tier: 'core' },        // hotel management, day job at Bounteous
       { name: 'PHP', tier: 'working' },      // irrigation, health & fitness
       { name: 'JavaScript', tier: 'working' },
       { name: 'C++', tier: 'working' },
